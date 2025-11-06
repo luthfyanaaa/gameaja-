@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🎯 Tic Tac Toe - Lawan Komputer</title>
+<style>
+  /* ========== GAYA UMUM ========== */
+  body {
+    margin: 0;
+    background: radial-gradient(circle at center, #0f0f2f, #000010);
+    color: #b3aaff;
+    font-family: "Poppins", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 4vw;
+    color: #8b80ff;
+    text-shadow: 0 0 10px #5f40ff, 0 0 20px #a080ff;
+    margin-bottom: 2vh;
+  }
+
+  /* ========== PAPAN PERMAINAN ========== */
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1vw;
+    width: 60vw;
+    max-width: 400px;
+  }
+
+  .cell {
+    width: 100%;
+    aspect-ratio: 1;
+    background: rgba(50, 30, 150, 0.3);
+    border: 2px solid rgba(150, 100, 255, 0.6);
+    border-radius: 10px;
+    font-size: 6vw;
+    color: #a8a8ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .cell:hover {
+    background: rgba(100, 60, 255, 0.4);
+    transform: scale(1.05);
+  }
+
+  .cell.taken {
+    cursor: default;
+    opacity: 0.8;
+  }
+
+  /* ========== PESAN HASIL ========== */
+  .message {
+    margin-top: 2vh;
+    font-size: 2.5vw;
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+
+  .message.show {
+    opacity: 1;
+    text-shadow: 0 0 10px #8f7fff, 0 0 20px #c0aaff;
+  }
+
+  /* ========== TOMBOL ========== */
+  .controls {
+    position: fixed;
+    top: 2vh;
+    right: 2vw;
+  }
+
+  button {
+    background: none;
+    border: 2px solid #8f7fff;
+    color: #8f7fff;
+    padding: 0.5em 1.2em;
+    border-radius: 10px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  button:hover {
+    background: #8f7fff;
+    color: #000;
+  }
+
+  #muteBtn {
+    font-size: 1.5em;
+    border: none;
+    background: transparent;
+    color: #8f7fff;
+    cursor: pointer;
+  }
+
+  .restart {
+    margin-top: 2vh;
+    display: none;
+  }
+
+  /* ========== RESPONSIVE ========== */
+  @media (max-width: 600px) {
+    h1 {
+      font-size: 6vw;
+    }
+    .board {
+      width: 80vw;
+    }
+    .message {
+      font-size: 5vw;
+    }
+  }
+
+  /* ========== EFEK MENANG ========== */
+  .win {
+    background: linear-gradient(45deg, #8b80ff, #4d39ff);
+    animation: glow 1s infinite alternate;
+  }
+
+  @keyframes glow {
+    from { box-shadow: 0 0 10px #8f7fff; }
+    to { box-shadow: 0 0 25px #c0aaff; }
+  }
+</style>
+</head>
+<body>
+  <h1>🎯 Tic Tac Toe - Lawan Komputer</h1>
+
+  <div class="controls">
+    <button id="muteBtn">🔊</button>
+  </div>
+
+  <div class="board" id="board"></div>
+  <div class="message" id="message"></div>
+  <button class="restart" id="restartBtn">Main Lagi</button>
+
+  <!-- Audio -->
+  <audio id="clickSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_d10a4bb93d.mp3?filename=click-124467.mp3"></audio>
+  <audio id="winSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_f3f8e80db5.mp3?filename=success-1-6297.mp3"></audio>
+  <audio id="bgMusic" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_5e2de4e68c.mp3?filename=ambient-future-game-113467.mp3" loop></audio>
+
+<script>
+/* ================================
+   TIC TAC TOE - LAWAN KOMPUTER
+   ================================ */
+
+// Elemen utama
+const boardEl = document.getElementById("board");
+const messageEl = document.getElementById("message");
+const restartBtn = document.getElementById("restartBtn");
+const muteBtn = document.getElementById("muteBtn");
+const clickSound = document.getElementById("clickSound");
+const winSound = document.getElementById("winSound");
+const bgMusic = document.getElementById("bgMusic");
+
+// Inisialisasi game
+let board = Array(9).fill("");
+let gameOver = false;
+let isMuted = false;
+
+// Mulai musik latar otomatis
+bgMusic.volume = 0.3;
+bgMusic.play().catch(()=>{});
+
+// Buat papan 3x3
+for (let i = 0; i < 9; i++) {
+  const cell = document.createElement("div");
+  cell.classList.add("cell");
+  cell.addEventListener("click", () => handleMove(i));
+  boardEl.appendChild(cell);
+}
+
+function handleMove(index) {
+  if (board[index] !== "" || gameOver) return;
+  playSound(clickSound);
+  board[index] = "X";
+  renderBoard();
+
+  if (checkWin("X")) return endGame("Kamu Menang!");
+  if (board.every(cell => cell !== "")) return endGame("Seri!");
+
+  // Komputer berpikir sebentar
+  setTimeout(() => {
+    computerMove();
+  }, 400);
+}
+
+function computerMove() {
+  const bestMove = getBestMove(board, "O");
+  board[bestMove] = "O";
+  renderBoard();
+
+  if (checkWin("O")) return endGame("Komputer Menang!");
+  if (board.every(cell => cell !== "")) return endGame("Seri!");
+}
+
+// AI minimax sederhana
+function getBestMove(newBoard, player) {
+  const available = newBoard.map((v,i) => v === "" ? i : null).filter(v => v !== null);
+
+  if (checkWinState(newBoard, "X")) return -10;
+  if (checkWinState(newBoard, "O")) return 10;
+  if (available.length === 0) return 0;
+
+  let bestScore = player === "O" ? -Infinity : Infinity;
+  let move;
+
+  for (let i of available) {
+    newBoard[i] = player;
+    let score = getBestMove(newBoard, player === "O" ? "X" : "O");
+    newBoard[i] = "";
+
+    if (player === "O") {
+      if (score > bestScore) {
+        bestScore = score;
+        move = i;
+      }
+    } else {
+      if (score < bestScore) {
+        bestScore = score;
+        move = i;
+      }
+    }
+  }
+
+  return move ?? available[Math.floor(Math.random() * available.length)];
+}
+
+// Render papan
+function renderBoard() {
+  const cells = document.querySelectorAll(".cell");
+  cells.forEach((cell, i) => {
+    cell.textContent = board[i];
+    cell.classList.toggle("taken", board[i] !== "");
+  });
+}
+
+// Mengecek kemenangan
+function checkWin(player) {
+  const combos = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  for (let combo of combos) {
+    if (combo.every(i => board[i] === player)) {
+      combo.forEach(i => document.querySelectorAll(".cell")[i].classList.add("win"));
+      return true;
+    }
+  }
+  return false;
+}
+
+// Mengecek kemenangan (untuk AI)
+function checkWinState(b, player) {
+  const combos = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  return combos.some(combo => combo.every(i => b[i] === player));
+}
+
+function endGame(result) {
+  gameOver = true;
+  messageEl.textContent = result;
+  messageEl.classList.add("show");
+  playSound(winSound);
+  restartBtn.style.display = "inline-block";
+}
+
+// Tombol main lagi
+restartBtn.addEventListener("click", () => {
+  board.fill("");
+  gameOver = false;
+  messageEl.classList.remove("show");
+  restartBtn.style.display = "none";
+  document.querySelectorAll(".cell").forEach(c => c.classList.remove("win"));
+  renderBoard();
+});
+
+// Suara dan mute
+muteBtn.addEventListener("click", () => {
+  isMuted = !isMuted;
+  if (isMuted) {
+    bgMusic.pause();
+    muteBtn.textContent = "🔇";
+  } else {
+    bgMusic.play();
+    muteBtn.textContent = "🔊";
+  }
+});
+
+function playSound(sound) {
+  if (!isMuted) {
+    sound.currentTime = 0;
+    sound.play();
+  }
+}
+
+renderBoard();
+</script>
+</body>
+</html>
